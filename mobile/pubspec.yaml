@@ -1,0 +1,74 @@
+name: nalamai_mobile
+description: "NalamAI — voice-first AI food-label assistant for visually impaired users."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.7
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # State management / navigation
+  flutter_riverpod: ^2.6.1
+  go_router: ^14.6.2
+
+  # Networking
+  dio: ^5.7.0
+  connectivity_plus: ^6.1.0
+
+  # Accessibility: voice input, TTS, haptics
+  speech_to_text: ^7.0.0
+  flutter_tts: ^4.2.0
+  vibration: ^3.1.3
+  just_audio: ^0.9.42
+
+  # Camera / barcode
+  camera: ^0.11.1
+  mobile_scanner: ^6.0.2
+  permission_handler: ^11.3.1
+
+  # Storage
+  flutter_secure_storage: ^9.2.2
+  shared_preferences: ^2.3.3
+
+  # Config / localization / utils
+  flutter_dotenv: ^5.2.1
+  intl: ^0.20.2
+  equatable: ^2.0.5
+  logging: ^1.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  mocktail: ^1.0.4
+
+# path_provider_foundation >=2.5.0 depends on package:objective_c, which uses Dart's native
+# assets/hooks build system. On a machine whose Flutter/Dart SDK is installed under a path
+# containing a space, that hook build fails (an unquoted subprocess invocation inside the SDK's
+# hook runner splits the path on the space) and blocks `flutter run`/`test`/`build` entirely,
+# even for non-Apple targets, since hooks currently run for every package in the resolved graph.
+# Pinning to the last hook-free release avoids the bug outright. Remove this override once
+# https://github.com/dart-lang/native/issues (native-assets hook runner Windows path quoting) is
+# fixed upstream, or once this project's SDKs live under a space-free path.
+dependency_overrides:
+  path_provider_foundation: 2.4.2
+
+flutter:
+  uses-material-design: true
+  generate: true
+
+  # NOTE: Tamil script rendering relies on the OS-provided Noto Sans Tamil font (bundled with
+  # stock Android/iOS) via font fallback — no custom font asset is required. If a target device
+  # lacks Tamil glyph support, bundle a Noto Sans Tamil .ttf under assets/fonts/ and register it
+  # here (see mobile/README.md).
+  assets:
+    - .env

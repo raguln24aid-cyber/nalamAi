@@ -1,0 +1,10 @@
+process.env.NODE_ENV = 'test';
+process.env.DATABASE_URL =
+  process.env.DATABASE_URL ?? 'postgresql://nalamai:nalamai@localhost:5432/nalamai_test?schema=public';
+process.env.JWT_ACCESS_SECRET = 'test-access-secret-please-ignore-0123456789';
+process.env.JWT_REFRESH_SECRET = 'test-refresh-secret-please-ignore-0123456789';
+process.env.OCR_PROVIDER = 'mock';
+process.env.BARCODE_PROVIDER = 'mock';
+process.env.AI_PROVIDER = 'mock';
+process.env.TTS_PROVIDER = 'mock';
+process.env.LOG_LEVEL = 'error';

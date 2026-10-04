@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nalamai
+      POSTGRES_PASSWORD: nalamai
+      POSTGRES_DB: nalamai
+    ports:
+      # Mapped to 5433 on the host — 5432 may already be taken by a native Postgres install.
+      - "5433:5432"
+    volumes:
+      - nalamai_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nalamai"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  nalamai_pg_data:

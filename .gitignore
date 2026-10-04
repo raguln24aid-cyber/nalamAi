@@ -1,0 +1,10 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Each subproject has its own detailed .gitignore (backend/.gitignore, mobile/.gitignore).
+# This root file only covers files that could appear at the repo root.
+*.log
+*.pid

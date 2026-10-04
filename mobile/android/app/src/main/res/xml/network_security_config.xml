@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 9+ blocks plain HTTP by default.
+
+  The loopback exemption is NOT a development convenience: just_audio plays a StreamAudioSource
+  (see TtsService._BytesAudioSource) by serving the bytes through a proxy HTTP server it runs on
+  127.0.0.1, so the cloud-voice fallback speaks over cleartext loopback even when the backend
+  itself is https. Without this, cloud TTS fails with CleartextNotPermittedException on every
+  device running Android 9 or later — which silences the app for any language the device has no
+  built-in voice for (commonly Tamil). Loopback traffic never leaves the device, so permitting it
+  costs nothing in security.
+
+  Everything else stays cleartext-blocked in release builds. Debug builds additionally allow
+  cleartext to any host, via src/debug/res/xml/network_security_config.xml, which overrides this
+  file in debug builds only — that is what lets a debug build talk to a local backend over LAN.
+
+  NOTE: cleartextTrafficPermitted cannot be set inside <debug-overrides> (that element accepts
+  only <trust-anchors>), which is why the debug-only relaxation lives in a build-type resource
+  rather than here. An earlier version of this file did exactly that and was silently ignored.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">localhost</domain>
+    </domain-config>
+</network-security-config>

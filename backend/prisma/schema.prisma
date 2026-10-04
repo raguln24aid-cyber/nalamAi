@@ -1,0 +1,264 @@
+// NalamAI backend database schema
+// See docs/DATABASE.md for an ER description and rationale.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Language {
+  en
+  ta
+  auto
+}
+
+enum DietaryPreference {
+  none
+  vegetarian
+  vegan
+  eggetarian
+  non_vegetarian
+}
+
+enum AllergySeverity {
+  mild
+  moderate
+  severe
+}
+
+enum ScanStatus {
+  processing
+  completed
+  failed
+}
+
+enum ProvenanceSource {
+  label_stated
+  ocr_detected
+  ai_interpreted
+  unverified
+}
+
+enum DietFlagType {
+  vegetarian
+  non_vegetarian
+  vegan
+  gluten_free
+  contains_gluten
+}
+
+enum SafetyFlagType {
+  allergen_match
+  nutrition_threshold
+  possible_allergen_unconfirmed
+}
+
+enum SafetyFlagSeverity {
+  info
+  warning
+  critical
+}
+
+enum ChatRole {
+  user
+  assistant
+}
+
+model User {
+  id                  String    @id @default(uuid())
+  email               String    @unique
+  passwordHash        String
+  preferredLanguage   Language  @default(auto)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  profile             UserProfile?
+  allergies           Allergy[]
+  restrictions        DietaryRestriction[]
+  scans               Scan[]
+  chatMessages        ChatMessage[]
+  refreshTokens       RefreshToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model UserProfile {
+  id                  String            @id @default(uuid())
+  userId              String            @unique
+  user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dietaryPreference   DietaryPreference @default(none)
+  notes               String?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  @@map("user_profiles")
+}
+
+/// A single user-declared allergy, e.g. "peanuts", "milk", "shellfish".
+model Allergy {
+  id          String          @id @default(uuid())
+  userId      String
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  allergen    String
+  severity    AllergySeverity @default(moderate)
+  createdAt   DateTime        @default(now())
+
+  @@unique([userId, allergen])
+  @@map("allergies")
+}
+
+/// Free-form or semi-standardised dietary restriction, e.g. "low sodium", "no added sugar".
+model DietaryRestriction {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restriction String
+  createdAt   DateTime  @default(now())
+
+  @@unique([userId, restriction])
+  @@map("dietary_restrictions")
+}
+
+model Product {
+  id           String    @id @default(uuid())
+  barcode      String?   @unique
+  name         String?
+  brand        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  nutritionFacts  NutritionFact?
+  ingredients     Ingredient[]
+  allergens       Allergen[]
+  dietFlags       DietFlag[]
+  scans           Scan[]
+
+  @@map("products")
+}
+
+model Scan {
+  id                 String      @id @default(uuid())
+  userId             String
+  user               User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId          String?
+  product            Product?    @relation(fields: [productId], references: [id])
+  status             ScanStatus  @default(processing)
+  languageDetected   Language?
+  rawOcrText         String?
+  extractionConfidence Float?
+  errorMessage       String?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  safetyFlags        SafetyFlag[]
+  chatMessages       ChatMessage[]
+
+  @@index([userId, createdAt])
+  @@map("scans")
+}
+
+model NutritionFact {
+  id                String            @id @default(uuid())
+  productId         String            @unique
+  product           Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+  servingSize       String?
+  calories          Float?
+  sugarG            Float?
+  proteinG          Float?
+  fatG              Float?
+  saturatedFatG     Float?
+  sodiumMg          Float?
+  fiberG            Float?
+  provenance        ProvenanceSource  @default(unverified)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@map("nutrition_facts")
+}
+
+model Ingredient {
+  id          String            @id @default(uuid())
+  productId   String
+  product     Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name        String
+  position    Int               @default(0)
+  provenance  ProvenanceSource  @default(ocr_detected)
+
+  @@index([productId])
+  @@map("ingredients")
+}
+
+model Allergen {
+  id          String            @id @default(uuid())
+  productId   String
+  product     Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name        String
+  /// true = label explicitly declares this allergen (e.g. "Contains: Milk")
+  /// false = inferred from an ingredient match, not an explicit declaration
+  declared    Boolean           @default(false)
+  provenance  ProvenanceSource  @default(ocr_detected)
+
+  @@index([productId])
+  @@map("allergens")
+}
+
+model DietFlag {
+  id          String            @id @default(uuid())
+  productId   String
+  product     Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+  type        DietFlagType
+  provenance  ProvenanceSource  @default(unverified)
+
+  @@index([productId])
+  @@map("diet_flags")
+}
+
+/// Snapshot of a safety comparison (user profile vs product) taken at scan time.
+/// Snapshotted (not recomputed live) so scan history remains an accurate record
+/// even if the user later edits their profile.
+model SafetyFlag {
+  id          String              @id @default(uuid())
+  scanId      String
+  scan        Scan                @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  type        SafetyFlagType
+  severity    SafetyFlagSeverity
+  message     String
+  provenance  ProvenanceSource
+  createdAt   DateTime            @default(now())
+
+  @@index([scanId])
+  @@map("safety_flags")
+}
+
+model ChatMessage {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scanId      String?
+  scan        Scan?     @relation(fields: [scanId], references: [id], onDelete: SetNull)
+  role        ChatRole
+  text        String
+  language    Language
+  createdAt   DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@index([scanId])
+  @@map("chat_messages")
+}

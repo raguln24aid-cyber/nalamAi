@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug-build override of src/main/res/xml/network_security_config.xml. Gradle gives build-type
+  resources precedence over main, so this file is used by `flutter run` and debug APKs and is
+  never packaged into a release build.
+
+  Permits cleartext to any host so a debug build can point at a backend running on a development
+  machine over LAN (see mobile/.env API_BASE_URL). The loopback entry is inherited in spirit from
+  main but restated, since this file replaces that one wholesale rather than merging with it.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
